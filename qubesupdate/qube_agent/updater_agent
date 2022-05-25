@@ -1,0 +1,14 @@
+#!/usr/bin/python3
+
+from utils import get_os_data
+from apt import upgrade as apt_upgrade
+from yum import upgrade as yum_upgrade
+
+os_data = get_os_data()
+
+if os_data["os_family"] == "Debian":
+    apt_upgrade()
+elif os_data["os_family"] == "RedHat":
+    yum_upgrade()
+else:
+    raise NotImplementedError()
