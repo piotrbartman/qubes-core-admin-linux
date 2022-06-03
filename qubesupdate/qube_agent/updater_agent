@@ -1,14 +1,36 @@
 #!/usr/bin/python3
+import sys
 
+from apt import APT
+from dnf import DNF
 from utils import get_os_data
-from apt import upgrade as apt_upgrade
-from yum import upgrade as yum_upgrade
 
-os_data = get_os_data()
 
-if os_data["os_family"] == "Debian":
-    apt_upgrade()
-elif os_data["os_family"] == "RedHat":
-    yum_upgrade()
-else:
-    raise NotImplementedError()
+def main(args=None):
+    """
+    Run the appropriate package manager.
+
+    :param args: args passed directly to package manager
+    """
+    os_data = get_os_data()
+
+    if os_data["os_family"] == "Debian":
+        apt = APT()
+        return_code = apt.upgrade(args)
+        # TODO
+        with open(apt.log_path) as f:
+            print("\n".join(f.readlines()))
+    elif os_data["os_family"] == "RedHat":
+        dnf = DNF()
+        return_code = dnf.upgrade(args)
+        # TODO
+        with open(dnf.log_path) as f:
+            print("\n".join(f.readlines()))
+    else:
+        raise NotImplementedError()
+
+    return return_code
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))  # TODO argument parser

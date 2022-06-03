@@ -1,90 +1,76 @@
-import logging
+# coding=utf-8
+#
+# The Qubes OS Project, http://www.qubes-os.org
+#
+# Copyright (C) 2022  Piotr Bartman <prbartman@invisiblethingslab.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
+# USA.
 
-from utils import compare_packages, run_cmd
+from typing import List, Tuple
+
+from package_manager import PackageManager
+from utils import run_cmd
 
 
-log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
+class APT(PackageManager):
+    def __init__(self):
+        super().__init__()
+        self.package_manager: str = "apt-get"
 
+    def refresh(self) -> Tuple[int, str, str]:
+        """
+        Use apt-get update to refresh available packages.
 
-def _refresh():
-    """
-    # TODO
-    """
-    cmd = ["sudo",
-           "apt-get",
-           "-q",
-           "update"
-           ]
+        :return: (return_code, stdout, stderr)
+        """
+        cmd = [self.package_manager, "-q", "update"]
+        ret_code, stdout, stderr = run_cmd(cmd, self.log)
+        return ret_code, stdout, stderr
 
-    ret_code, stdout, stderr = run_cmd(cmd)
+    def get_packages(self):
+        """
+        Use dpkg-query to return the installed packages and their versions.
+        """
+        cmd = [
+            "dpkg-query",
+            "--showformat",
+            "${Status} ${Package} ${Version}\n",
+            "-W",
+        ]
+        # EXAMPLE OUTPUT:
+        # install ok installed qubes-core-agent 4.1.35-1+deb11u1
+        ret_code, stdout, stderr = run_cmd(cmd, self.log)
 
-    if ret_code != 0:
-        # raise RuntimeError(stderr)  # TODO: silent mode?
-        log.error("ERROR: %s", stderr)
-
-    # TODO handle errors
-
-
-def get_packages():
-    """
-    # TODO
-    """
-
-    cmd = [
-        "dpkg-query",
-        "--showformat",
-        "${Status} ${Package} ${Version}\n",
-        "-W",
-    ]
-
-    retcode, stdout, stderr = run_cmd(cmd)
-    # install ok installed openssl 1.1.1n-0+deb11u2
-
-    packages = {}
-    for line in stdout.splitlines():  # TODO
-        cols = line.split()
-        try:
+        packages = {}
+        for line in stdout.splitlines():
+            cols = line.split()
             selection, flag, status, package, version = cols
-        except (ValueError, IndexError):
-            continue
-
-        if cols:
             if selection in ("install", "hold") and status == "installed":
                 packages.setdefault(package, []).append(version)
 
-    return packages
+        return packages
 
+    def parse_options(self, *args, **kwargs) -> List[str]:
+        """
+        Parse extra options for package manager.
+        """
+        raise NotImplementedError()  # TODO
 
-def upgrade(refresh=True, remove=False):
-    """
-    # TODO
-    """
-    if refresh:
-        _refresh()
-
-    old_pkg = get_packages()
-
-    cmd = ["sudo",
-           "apt-get",
-           "-q",
-           "-y",
-           "dist-upgrade" if remove else "upgrade"]
-    # TODO flags?
-
-    ret_code, stdout, stderr = run_cmd(cmd)  # TODO sync progress
-
-    new_pkg = get_packages()
-
-    changes = compare_packages(old=old_pkg, new=new_pkg)
-
-    for pkg in changes["updated"]:
-        log.debug("%s %s->%s",
-                  pkg,
-                  changes["updated"][pkg]["old"],
-                  changes["updated"][pkg]["new"]
-                  )
-
-    # TODO: gather logs if ret_code != 0
-
-    return ret_code
+    def get_action(self, remove_obsolete: bool) -> List[str]:
+        """
+        Return command `upgrade` or `dist-upgrade` if `remove_obsolete`.
+        """
+        return ["dist-upgrade"] if remove_obsolete else ["upgrade"]

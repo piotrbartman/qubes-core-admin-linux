@@ -18,7 +18,6 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
 # USA.
-
 import os
 import time
 from os.path import join, isfile
@@ -35,9 +34,10 @@ class QubeConnection:
        stop the qube if it was started by this connection.
     """
 
-    def __init__(self, qube, dest_dir):
+    def __init__(self, qube, dest_dir, log):
         self.qube = qube
         self.dest_dir = dest_dir
+        self.log = log
         self._initially_running = None
         self.__connected = False
 
@@ -79,7 +79,7 @@ class QubeConnection:
                 "cat {} | qvm-run --pass-io {} 'cat > {}'".format(
                     src_path, self.qube, dest_path)
             command += command_line + "\n"
-        print(command)  # TODO log
+        self.log.debug("RUN COMMAND: %s", command)
         os.system(command)
 
     def _map_paths(self, src_dir):
@@ -88,7 +88,7 @@ class QubeConnection:
                   if isfile(join(src_dir, file))}
         return result
 
-    def run_entrypoint(self, entrypoint_path, force_color):
+    def run_entrypoint(self, entrypoint_path, force_color, *args):
         """
         Run a script in the qube.
 
@@ -96,13 +96,18 @@ class QubeConnection:
         :param force_color: bool
         :return: Tuple[int, str]: return code and output of the script
         """
-        return_code, stdout_lines = QubeConnection._run_shell_command_in_qube(
-            self.qube,
-            'chmod 744 {}\n{}'.format(entrypoint_path, entrypoint_path),  # TODO test TODO +x
-            force_color
+        entrypoint_args = " ".join(args)
+        command = 'chmod u+x {}\n{} {}'.format(  # TODO test
+                entrypoint_path,
+                entrypoint_path,
+                entrypoint_args
+        )
+        self.log.debug("RUN COMMAND: %s", command)
+        return_code, output = QubeConnection._run_shell_command_in_qube(
+            self.qube, command, force_color
         )
 
-        return return_code, stdout_lines
+        return return_code, output
 
     @staticmethod
     def _run_shell_command_in_qube(target, command, force_color=False):
