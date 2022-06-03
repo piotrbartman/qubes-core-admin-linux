@@ -33,7 +33,6 @@ from qube_connection import QubeConnection
 
 FORMAT_LOG = '%(asctime)s %(message)s'
 LOGPATH = '/var/log/qubes'
-
 formatter_log = logging.Formatter(FORMAT_LOG)
 
 
@@ -110,42 +109,45 @@ class UpdateAgentManager:
     AGENT_RELATIVE_DIR = "qube_agent"
     ENTRYPOINT = "updater_agent"
 
-    def __init__(self, app, qube, force_color=False):
+    def __init__(self, app, qube, force_color=False, loglevel='NOTSET'):
         self.qube = qube
         self.app = app
         self.log = logging.getLogger('qubesupdate.qube.' + qube.name)
-        self.log_path = os.path.join(LOGPATH, 'mgmt-{}.log'.format(qube.name))
+        self.log_path = os.path.join(LOGPATH, 'update-{}.log'.format(qube.name))
         handler_log = logging.FileHandler(
             self.log_path,
             encoding='utf-8')
         handler_log.setFormatter(formatter_log)
         self.log.addHandler(handler_log)
+        self.log.setLevel(loglevel)
         self.log.propagate = False
         self.force_color = force_color
 
-    def run_agent(self, return_output):
-        self.log.info('Running update agent for {}'.format(self.qube.name))
+    def run_agent(self, return_output, *args):
+        self.log.debug('Running update agent for {}'.format(self.qube.name))
         dest_dir = "/tmp/qubesupdate/"
         dest_agent = os.path.join(dest_dir, UpdateAgentManager.ENTRYPOINT)
         this_dir = os.path.dirname(os.path.realpath(__file__))
         src_dir = join(this_dir, UpdateAgentManager.AGENT_RELATIVE_DIR)
 
-        with QubeConnection(self.qube, dest_dir) as qc:
-            self.log.info("Transferring files to destination qube: {}".format(
+        with QubeConnection(self.qube, dest_dir, self.log) as qc:
+            self.log.debug("Transferring files to destination qube: {}".format(
                 self.qube.name))
             qc.transfer_agent(src_dir)
 
-            self.log.info("The agent is starting the task in qube: {}".format(
+            self.log.debug("The agent is starting the task in qube: {}".format(
                 self.qube.name))
-            exit_code, stdout_lines = qc.run_entrypoint(
-                dest_agent, self.force_color)
+            exit_code, output = qc.run_entrypoint(
+                dest_agent, self.force_color, *args)
 
-            for line in stdout_lines:
+            # TODO handle logs
+
+            for line in output:
                 self.log.info('output: %s', line)
             self.log.info('exit code: %d', exit_code)
 
-            if return_output and stdout_lines:
-                return_data = stdout_lines
+            if return_output and output:
+                return_data = output
             else:
                 return_data = "OK" if exit_code == 0 else \
                     "ERROR (exit code {}, details in {})".format(

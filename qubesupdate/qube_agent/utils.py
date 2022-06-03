@@ -21,8 +21,9 @@
 
 import re
 import ast
-import logging
 import subprocess
+from typing import List, Tuple, Optional
+
 import pkg_resources
 
 
@@ -117,18 +118,22 @@ def compare_packages(old, new):
             "removed": {pkg: old[pkg] for pkg in old if pkg not in new}}
 
 
-def run_cmd(command, payload=None):
+def run_cmd(command: List[str], log: Optional = None) -> Tuple[int, str, str]:
     """
-    # TODO
+    Run command and wait.
 
-    :param command:
-    :param payload:
-    :return:
+    :param command: command to execute
+    :param log: optional logger
+    :return: (return_code, stdout, stderr)
     """
+    if log:
+        log.debug("agent command: %s", " ".join(command))
     with subprocess.Popen(command,
                           stdin=subprocess.PIPE,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE) as p:
-        stdout, stderr = p.communicate(payload)
+        stdout, stderr = p.communicate()
+    if log:
+        log.debug("return code: %i", p.returncode)
 
     return p.returncode, stdout.decode(), stderr.decode()
