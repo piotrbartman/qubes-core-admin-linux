@@ -31,10 +31,6 @@ import qubesadmin.vm
 import qubesadmin.exc
 from qube_connection import QubeConnection
 
-FORMAT_LOG = '%(asctime)s %(message)s'
-LOGPATH = '/var/log/qubes'
-formatter_log = logging.Formatter(FORMAT_LOG)
-
 
 class UpdateManager:
     """
@@ -106,17 +102,22 @@ class UpdateAgentManager:
     """
     Send update agent files and run it in the qube.
     """
-    AGENT_RELATIVE_DIR = "qube_agent"
-    ENTRYPOINT = "updater_agent"
+    AGENT_RELATIVE_DIR = "agent"
+    ENTRYPOINT = "entrypoint"
+    FORMAT_LOG = '%(asctime)s %(message)s'
+    LOGPATH = '/var/log/qubes'
+    WORKDIR = "/tmp/qubesupdate/"
 
     def __init__(self, app, qube, force_color=False, loglevel='NOTSET'):
         self.qube = qube
         self.app = app
         self.log = logging.getLogger('qubesupdate.qube.' + qube.name)
-        self.log_path = os.path.join(LOGPATH, 'update-{}.log'.format(qube.name))
+        self.log_path = os.path.join(
+            UpdateAgentManager.LOGPATH, f'update-{qube.name}.log')
         handler_log = logging.FileHandler(
             self.log_path,
             encoding='utf-8')
+        formatter_log = logging.Formatter(UpdateAgentManager.FORMAT_LOG)
         handler_log.setFormatter(formatter_log)
         self.log.addHandler(handler_log)
         self.log.setLevel(loglevel)
@@ -125,7 +126,7 @@ class UpdateAgentManager:
 
     def run_agent(self, return_output, *args):
         self.log.debug('Running update agent for {}'.format(self.qube.name))
-        dest_dir = "/tmp/qubesupdate/"
+        dest_dir = UpdateAgentManager.WORKDIR
         dest_agent = os.path.join(dest_dir, UpdateAgentManager.ENTRYPOINT)
         this_dir = os.path.dirname(os.path.realpath(__file__))
         src_dir = join(this_dir, UpdateAgentManager.AGENT_RELATIVE_DIR)
@@ -140,11 +141,9 @@ class UpdateAgentManager:
             exit_code, output = qc.run_entrypoint(
                 dest_agent, self.force_color, *args)
 
-            # TODO handle logs
-
             for line in output:
-                self.log.info('output: %s', line)
-            self.log.info('exit code: %d', exit_code)
+                self.log.info('agent output: %s', line)
+            self.log.info('agent exit code: %d', exit_code)
 
             if return_output and output:
                 return_data = output

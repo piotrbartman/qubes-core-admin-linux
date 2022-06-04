@@ -24,7 +24,6 @@ import shutil
 from typing import List, Tuple
 
 from package_manager import PackageManager
-from utils import run_cmd
 
 log = logging.getLogger(__name__)
 
@@ -47,7 +46,7 @@ class DNF(PackageManager):
         """
         Use package manager to refresh available packages.
 
-        :return: (return_code, stdout, stderr)
+        :return: (exit_code, stdout, stderr)
         """
         out = ""
         err = ""
@@ -57,8 +56,8 @@ class DNF(PackageManager):
                "-y",
                "clean",
                "expire-cache"]
-        ret_code, stdout, stderr = run_cmd(cmd, self.log)
-        return_code = ret_code
+        ret_code, stdout, stderr = self.run_cmd(cmd)
+        exit_code = ret_code
         out += stdout
         err += stderr
 
@@ -66,12 +65,12 @@ class DNF(PackageManager):
                "-q",
                "-y",
                "check-update"]
-        ret_code, stdout, stderr = run_cmd(cmd, self.log)
-        return_code = max(ret_code, return_code)
+        ret_code, stdout, stderr = self.run_cmd(cmd)
+        exit_code = max(ret_code, exit_code)
         out += stdout
         err += stderr
 
-        return return_code, out, err
+        return exit_code, out, err
 
     def get_packages(self):
         """
@@ -86,7 +85,7 @@ class DNF(PackageManager):
         ]
         # EXAMPLE OUTPUT:
         # qubes-core-agent 4.1.351.fc34
-        ret_code, stdout, stderr = run_cmd(cmd, self.log)
+        ret_code, stdout, stderr = self.run_cmd(cmd)
 
         packages = {}
         for line in stdout.splitlines():

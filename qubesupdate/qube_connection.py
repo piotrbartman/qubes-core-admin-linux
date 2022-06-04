@@ -34,10 +34,10 @@ class QubeConnection:
        stop the qube if it was started by this connection.
     """
 
-    def __init__(self, qube, dest_dir, log):
+    def __init__(self, qube, dest_dir, logger):
         self.qube = qube
         self.dest_dir = dest_dir
-        self.log = log
+        self.logger = logger
         self._initially_running = None
         self.__connected = False
 
@@ -47,12 +47,15 @@ class QubeConnection:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        return_code, stdout_lines = self._run_shell_command_in_qube(
+        self.logger.info('Remove %s', self.dest_dir)
+        exit_code, stdout_lines = self._run_shell_command_in_qube(
             self.qube, 'rm -r {}'.format(self.dest_dir))
-        if stdout_lines:  # TODO
-            print("\n".join(stdout_lines))
+        for line in stdout_lines:
+            self.logger.debug('Remove output: %s', line)
+        self.logger.debug('Remove exit code: %d', exit_code)
 
         if self.qube.is_running() and not self._initially_running:
+            self.logger.info('Shutdown %s', self.qube.name)
             self.qube.shutdown()
             # FIXME: convert to self.vm.shutdown(wait=True) in core3
             while self.qube.is_running():
@@ -79,7 +82,7 @@ class QubeConnection:
                 "cat {} | qvm-run --pass-io {} 'cat > {}'".format(
                     src_path, self.qube, dest_path)
             command += command_line + "\n"
-        self.log.debug("RUN COMMAND: %s", command)
+        self.logger.debug("RUN COMMAND: %s", command)
         os.system(command)
 
     def _map_paths(self, src_dir):
@@ -102,12 +105,12 @@ class QubeConnection:
                 entrypoint_path,
                 entrypoint_args
         )
-        self.log.debug("RUN COMMAND: %s", command)
-        return_code, output = QubeConnection._run_shell_command_in_qube(
+        self.logger.debug("RUN COMMAND: %s", command)
+        exit_code, output = QubeConnection._run_shell_command_in_qube(
             self.qube, command, force_color
         )
 
-        return return_code, output
+        return exit_code, output
 
     @staticmethod
     def _run_shell_command_in_qube(target, command, force_color=False):
