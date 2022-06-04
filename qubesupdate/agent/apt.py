@@ -22,7 +22,6 @@
 from typing import List, Tuple
 
 from package_manager import PackageManager
-from utils import run_cmd
 
 
 class APT(PackageManager):
@@ -34,10 +33,10 @@ class APT(PackageManager):
         """
         Use apt-get update to refresh available packages.
 
-        :return: (return_code, stdout, stderr)
+        :return: (exit_code, stdout, stderr)
         """
         cmd = [self.package_manager, "-q", "update"]
-        ret_code, stdout, stderr = run_cmd(cmd, self.log)
+        ret_code, stdout, stderr = self.run_cmd(cmd)
         return ret_code, stdout, stderr
 
     def get_packages(self):
@@ -52,7 +51,7 @@ class APT(PackageManager):
         ]
         # EXAMPLE OUTPUT:
         # install ok installed qubes-core-agent 4.1.35-1+deb11u1
-        ret_code, stdout, stderr = run_cmd(cmd, self.log)
+        ret_code, stdout, stderr = self.run_cmd(cmd)
 
         packages = {}
         for line in stdout.splitlines():

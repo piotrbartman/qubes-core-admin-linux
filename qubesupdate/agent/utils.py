@@ -21,13 +21,12 @@
 
 import re
 import ast
-import subprocess
-from typing import List, Tuple, Optional
+from typing import Optional, Dict
 
 import pkg_resources
 
 
-def get_os_data():
+def get_os_data(logger: Optional = None) -> Dict[str, str]:
     """
     Return dictionary with info about the operating system
 
@@ -35,14 +34,15 @@ def get_os_data():
     id: "linux" or a lower-case string identifying the operating system,
     name: "Linux" or a string identifying the operating system,
     codename (optional): a operating system release code name,
-    release (optional): packaging.version.Version,  # TODO
+    release (optional): packaging.version.Version,
     os_family: "Unknown", "RedHat", "Debian".
     """
     data = {}
 
     os_release = _load_os_release(
         "/etc/os-release",
-        "/usr/lib/os-release"
+        "/usr/lib/os-release",
+        logger=logger
     )
 
     data["id"] = os_release.get("ID", "linux").strip()
@@ -67,7 +67,7 @@ def get_os_data():
     return data
 
 
-def _load_os_release(*os_release_files, logger=None):
+def _load_os_release(*os_release_files, logger: Optional):
     """
     Load os-release as dictionary.
 
@@ -95,45 +95,9 @@ def _load_os_release(*os_release_files, logger=None):
             break
         except OSError as e:
             if logger:
-                logger.error("ERROR: %s", str(e))
+                logger.info("Could not read file %s: %s", filename, str(e))
 
     if not result:
-        raise IOError("Failed to read os-release file")  # TODO
+        raise IOError("Failed to read os-release file")
 
     return result
-
-
-def compare_packages(old, new):
-    """
-    Compare installed package dictionary and return dictionary with differences.
-
-    :param old: Dict[package_name, version] packages before update
-    :param new: Dict[package_name, version] packages after update
-    """
-    return {"installed": {pkg: new[pkg] for pkg in new if pkg not in old},
-            "updated": {pkg: {"old": old[pkg], "new": new[pkg]}
-                        for pkg in new
-                        if pkg in old and old[pkg] != new[pkg]
-                        },
-            "removed": {pkg: old[pkg] for pkg in old if pkg not in new}}
-
-
-def run_cmd(command: List[str], log: Optional = None) -> Tuple[int, str, str]:
-    """
-    Run command and wait.
-
-    :param command: command to execute
-    :param log: optional logger
-    :return: (return_code, stdout, stderr)
-    """
-    if log:
-        log.debug("agent command: %s", " ".join(command))
-    with subprocess.Popen(command,
-                          stdin=subprocess.PIPE,
-                          stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE) as p:
-        stdout, stderr = p.communicate()
-    if log:
-        log.debug("return code: %i", p.returncode)
-
-    return p.returncode, stdout.decode(), stderr.decode()

@@ -21,10 +21,9 @@
 
 import os
 import logging
+import subprocess
 import sys
 from typing import Optional, Dict, List, Tuple
-
-from utils import compare_packages, run_cmd
 
 FORMAT_LOG = '%(message)s'
 LOGPATH = '/tmp/qubesupdate'  # TODO
@@ -57,11 +56,11 @@ class PackageManager:
         :param remove_obsolete: remove obsolete packages
         :return: return code
         """
-        return_code = 0
+        exit_code = 0
 
         if refresh:
-            return_code, stdout, stderr = self.refresh()
-            if return_code != 0 and enforce_refresh:
+            exit_code, stdout, stderr = self.refresh()
+            if exit_code != 0 and enforce_refresh:
                 print(stdout)
                 print(stderr, file=sys.stderr)
                 return 1
@@ -77,12 +76,12 @@ class PackageManager:
                *options,
                *self.get_action(remove_obsolete)]
 
-        ret_code, stdout, stderr = run_cmd(cmd, self.log)  # TODO sync progress
-        return_code = max(return_code, ret_code)
+        ret_code, stdout, stderr = self.run_cmd(cmd)  # TODO sync progress
+        exit_code = max(exit_code, ret_code)
 
         new_pkg = self.get_packages()
 
-        changes = compare_packages(old=old_pkg, new=new_pkg)
+        changes = PackageManager.compare_packages(old=old_pkg, new=new_pkg)
 
         self.log.info("Installed packages:")
         for pkg in changes["installed"]:
@@ -98,13 +97,46 @@ class PackageManager:
         for pkg in changes["removed"]:
             self.log.info("%s %s", pkg, changes["removed"][pkg])
 
-        return return_code
+        return exit_code
+
+    def run_cmd(self, command: List[str]) -> Tuple[int, str, str]:
+        """
+        Run command and wait.
+
+        :param command: command to execute
+        :return: (exit_code, stdout, stderr)
+        """
+        self.log.debug("agent command: %s", " ".join(command))
+        with subprocess.Popen(command,
+                              stdin=subprocess.PIPE,
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE) as p:
+            stdout, stderr = p.communicate()
+        self.log.debug("return code: %i", p.returncode)
+
+        return p.returncode, stdout.decode(), stderr.decode()
+
+    @staticmethod
+    def compare_packages(old, new):
+        """
+        Compare installed packages and return dictionary with differences.
+
+        :param old: Dict[package_name, version] packages before update
+        :param new: Dict[package_name, version] packages after update
+        """
+        return {"installed": {pkg: new[pkg] for pkg in new if pkg not in old},
+                "updated": {pkg: {"old": old[pkg], "new": new[pkg]}
+                            for pkg in new
+                            if pkg in old and old[pkg] != new[pkg]
+                            },
+                "removed": {pkg: old[pkg] for pkg in old if pkg not in new}}
+
 
     def refresh(self) -> Tuple[int, str, str]:
         """
         Refresh available packages for upgrade.
 
-        :return: (return_code, stdout, stderr)
+        :return: (exit_code, stdout, stderr)
         """
         raise NotImplementedError()
 

@@ -33,6 +33,7 @@ def parse_args(args):
                         help='Do not upgrade if refresh fails')
     parser.add_argument('--remove-obsolete', action='store_true',
                         help='Remove obsolete packages during upgrading')
+
     parser.add_argument('--show-output', action='store_true',
                         help='Show output of management commands')
     parser.add_argument('--force-color', action='store_true',
@@ -42,6 +43,7 @@ def parse_args(args):
                         help='Maximum number of VMs configured simultaneously '
                              '(default: %(default)d)',
                         type=int, default=4)
+
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--targets', action='store',
                        help='Comma separated list of VMs to target')
