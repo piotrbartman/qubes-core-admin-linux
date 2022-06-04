@@ -1,5 +1,7 @@
 #!/usr/bin/python3
+import os
 import sys
+import pkg_resources
 
 from apt import APT
 from dnf import DNF
@@ -13,16 +15,39 @@ def main(args=None):
     :param args: args passed directly to package manager
     """
     os_data = get_os_data()
+    refresh_args = []
+    upgrade_args = []
 
     if os_data["os_family"] == "Debian":
+        if os_data["codename"] == "buster":
+            # https://bugs.debian.org/931566
+            # Apply the workaround manually, to be able to pull in the fixed
+            # apt version
+            refresh_args.append("--allow-releaseinfo-change")
+
         apt = APT()
-        return_code = apt.upgrade(args)
+        return_code = apt.upgrade(
+            refresh=True,
+            enforce_refresh=True,
+            remove_obsolete=True,
+            refresh_args=refresh_args,
+            upgrade_args=upgrade_args,
+        )
         # TODO
         with open(apt.log_path) as f:
             print("\n".join(f.readlines()))
     elif os_data["os_family"] == "RedHat":
+        manage_rpm_macro(os_data)
+        disable_deltarpm()
+        # TODO: install dnf and rpm
         dnf = DNF()
-        return_code = dnf.upgrade(args)
+        return_code = dnf.upgrade(
+            refresh=True,
+            enforce_refresh=True,
+            remove_obsolete=True,
+            refresh_args=refresh_args,
+            upgrade_args=upgrade_args,
+        )
         # TODO
         with open(dnf.log_path) as f:
             print("\n".join(f.readlines()))
@@ -30,6 +55,23 @@ def main(args=None):
         raise NotImplementedError()
 
     return return_code
+
+
+def manage_rpm_macro(os_data):
+    rpm_macro = "/usr/lib/rpm/macros.d/macros.qubes"
+    if (os_data["id"] == "fedora"
+            and os_data["release"] < pkg_resources.parse_version("33")):
+        with open(rpm_macro, "w") as f:
+            f.write("# CVE-2021-20271 mitigation\n"
+                    "%_pkgverify_level all")
+    else:
+        if os.path.exists(rpm_macro):
+            os.remove(rpm_macro)
+
+
+def disable_deltarpm():
+    with open("/etc/dnf/dnf.conf", "a") as f:
+        f.write("\ndeltarpm=False\n")
 
 
 if __name__ == '__main__':

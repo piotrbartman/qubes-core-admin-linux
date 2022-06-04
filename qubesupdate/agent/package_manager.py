@@ -43,14 +43,17 @@ class PackageManager:
 
     def upgrade(
             self,
-            refresh: bool = True,
-            enforce_refresh: bool = True,
-            remove_obsolete: bool = False,
-            *args
+            refresh: bool,
+            enforce_refresh: bool,
+            remove_obsolete: bool,
+            refresh_args: List[str] = (),
+            upgrade_args: List[str] = ()
     ):
         """
         Upgrade packages using system package manager.
 
+        :param refresh_args: arguments pass to package manager during refresh
+        :param upgrade_args: arguments pass to package manager during upgrade
         :param refresh: refresh available packages first
         :param enforce_refresh: if `refresh`, and refresh fails, stop and fail
         :param remove_obsolete: remove obsolete packages
@@ -131,11 +134,11 @@ class PackageManager:
                             },
                 "removed": {pkg: old[pkg] for pkg in old if pkg not in new}}
 
-
-    def refresh(self) -> Tuple[int, str, str]:
+    def refresh(self, refresh_args: List[str] = ()) -> Tuple[int, str, str]:
         """
         Refresh available packages for upgrade.
 
+        :param refresh_args: arguments pass to package manager
         :return: (exit_code, stdout, stderr)
         """
         raise NotImplementedError()

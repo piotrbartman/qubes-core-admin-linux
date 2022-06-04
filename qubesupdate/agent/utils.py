@@ -21,12 +21,12 @@
 
 import re
 import ast
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 
 import pkg_resources
 
 
-def get_os_data(logger: Optional = None) -> Dict[str, str]:
+def get_os_data(logger: Optional = None) -> Dict[str, Any]:
     """
     Return dictionary with info about the operating system
 
