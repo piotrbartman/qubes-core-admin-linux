@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 import os
 import sys
+from typing import Dict
+
 import pkg_resources
 
 from apt import APT
@@ -15,6 +17,7 @@ def main(args=None):
     :param args: args passed directly to package manager
     """
     os_data = get_os_data()
+    requirements = {}
     refresh_args = []
     upgrade_args = []
 
@@ -25,39 +28,28 @@ def main(args=None):
             # apt version
             refresh_args.append("--allow-releaseinfo-change")
 
-        apt = APT()
-        return_code = apt.upgrade(
-            refresh=True,
-            enforce_refresh=True,
-            remove_obsolete=True,
-            refresh_args=refresh_args,
-            upgrade_args=upgrade_args,
-        )
-        # TODO
-        with open(apt.log_path) as f:
-            print("\n".join(f.readlines()))
+        pkg_mng = APT()
     elif os_data["os_family"] == "RedHat":
-        manage_rpm_macro(os_data)
+        manage_rpm_macro(os_data, requirements)
         disable_deltarpm()
-        # TODO: install dnf and rpm
-        dnf = DNF()
-        return_code = dnf.upgrade(
-            refresh=True,
-            enforce_refresh=True,
-            remove_obsolete=True,
-            refresh_args=refresh_args,
-            upgrade_args=upgrade_args,
-        )
-        # TODO
-        with open(dnf.log_path) as f:
-            print("\n".join(f.readlines()))
+        pkg_mng = DNF()
     else:
         raise NotImplementedError()
+
+    return_code = pkg_mng.upgrade(refresh=True,
+                                  hard_fail=True,
+                                  remove_obsolete=True,
+                                  requirements=requirements,
+                                  refresh_args=refresh_args,
+                                  upgrade_args=upgrade_args)
+    # TODO
+    with open(pkg_mng.log_path) as f:
+        print("\n".join(f.readlines()))
 
     return return_code
 
 
-def manage_rpm_macro(os_data):
+def manage_rpm_macro(os_data, requirements: Dict[str, str]):
     rpm_macro = "/usr/lib/rpm/macros.d/macros.qubes"
     if (os_data["id"] == "fedora"
             and os_data["release"] < pkg_resources.parse_version("33")):
@@ -67,9 +59,11 @@ def manage_rpm_macro(os_data):
     else:
         if os.path.exists(rpm_macro):
             os.remove(rpm_macro)
+        requirements.update({"dnf": "4.7.0", "rpm": "4.14.2"})
 
 
 def disable_deltarpm():
+    # TODO dnf makecache
     with open("/etc/dnf/dnf.conf", "a") as f:
         f.write("\ndeltarpm=False\n")
 
