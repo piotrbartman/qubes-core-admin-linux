@@ -31,7 +31,7 @@ formatter_log = logging.Formatter(FORMAT_LOG)
 
 
 class PackageManager:
-    def __init__(self, loglevel="NOTSET"):
+    def __init__(self, loglevel="INFO"):
         self.package_manager: Optional[str] = None
         self.log = logging.getLogger('qubesupdate.agent.PackageManager')
         self.log.setLevel(loglevel)
@@ -44,36 +44,50 @@ class PackageManager:
     def upgrade(
             self,
             refresh: bool,
-            enforce_refresh: bool,
+            hard_fail: bool,
             remove_obsolete: bool,
+            requirements: Optional[Dict[str, str]] = None,
             refresh_args: List[str] = (),
             upgrade_args: List[str] = ()
     ):
         """
         Upgrade packages using system package manager.
 
+        :param refresh: refresh available packages first
+        :param hard_fail: if refresh or installing requirements fails,
+                          stop and fail
+        :param remove_obsolete: remove obsolete packages
+        :param requirements: packages versions required before full upgrade
         :param refresh_args: arguments pass to package manager during refresh
         :param upgrade_args: arguments pass to package manager during upgrade
-        :param refresh: refresh available packages first
-        :param enforce_refresh: if `refresh`, and refresh fails, stop and fail
-        :param remove_obsolete: remove obsolete packages
         :return: return code
         """
         exit_code = 0
 
         if refresh:
-            exit_code, stdout, stderr = self.refresh()
-            if exit_code != 0 and enforce_refresh:
+            ret_code, stdout, stderr = self.refresh(refresh_args)
+            if ret_code != 0:
                 print(stdout)
                 print(stderr, file=sys.stderr)
-                return 1
+                if hard_fail:
+                    return 199
+            exit_code = max(exit_code, ret_code)
 
-        old_pkg = self.get_packages()
+        curr_pkg = self.get_packages()
 
-        options = []  # TODO self.parse_options(*args)
+        if requirements:
+            ret_code, stdout, stderr = self.install_requirements(
+                requirements, curr_pkg)
+            if ret_code != 0:
+                print(stdout)
+                print(stderr, file=sys.stderr)
+                if hard_fail:
+                    return 2
+            exit_code = max(exit_code, ret_code)
 
-        cmd = ["sudo",
-               self.package_manager,
+        options = []  # TODO self.parse_options(*upgrade_args)
+
+        cmd = [self.package_manager,
                "-q",
                "-y",
                *options,
@@ -84,7 +98,7 @@ class PackageManager:
 
         new_pkg = self.get_packages()
 
-        changes = PackageManager.compare_packages(old=old_pkg, new=new_pkg)
+        changes = PackageManager.compare_packages(old=curr_pkg, new=new_pkg)
 
         self.log.info("Installed packages:")
         for pkg in changes["installed"]:
@@ -118,6 +132,54 @@ class PackageManager:
         self.log.debug("return code: %i", p.returncode)
 
         return p.returncode, stdout.decode(), stderr.decode()
+
+    def install_requirements(
+            self,
+            requirements: Optional[Dict[str, str]],
+            curr_pkg: Dict[str, List[str]]
+    ) -> Tuple[int, str, str]:
+        if requirements is None:
+            requirements = {}
+
+        exit_code = 0
+        out = ""
+        err = ""
+        to_install = []  # install latest (ignore version)
+        to_upgrade = {}
+        for pkg, version in requirements.items():
+            if pkg not in curr_pkg:
+                to_install.append(pkg)
+            else:
+                for v in curr_pkg[pkg]:
+                    if version < v:
+                        break
+                else:
+                    to_upgrade[pkg] = version
+        if to_install:
+            cmd = ["sudo",
+                   self.package_manager,
+                   "-q",
+                   "-y",
+                   "install",
+                   *to_install]
+            ret_code, stdout, stderr = self.run_cmd(cmd)
+            exit_code = max(exit_code, ret_code)
+            out += stdout
+            err += stderr
+
+        if to_upgrade:
+            cmd = ["sudo",
+                   self.package_manager,
+                   "-q",
+                   "-y",
+                   *self.get_action(remove_obsolete=False),
+                   *to_upgrade]
+            ret_code, stdout, stderr = self.run_cmd(cmd)
+            exit_code = max(exit_code, ret_code)
+            out += stdout
+            err += stderr
+
+        return exit_code, out, err
 
     @staticmethod
     def compare_packages(old, new):

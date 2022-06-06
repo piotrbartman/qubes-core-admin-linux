@@ -108,7 +108,7 @@ class UpdateAgentManager:
     LOGPATH = '/var/log/qubes'
     WORKDIR = "/tmp/qubesupdate/"
 
-    def __init__(self, app, qube, force_color=False, loglevel='NOTSET'):
+    def __init__(self, app, qube, force_color=False, loglevel='INFO'):
         self.qube = qube
         self.app = app
         self.log = logging.getLogger('qubesupdate.qube.' + qube.name)

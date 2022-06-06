@@ -54,7 +54,6 @@ class DNF(PackageManager):
 
         cmd = [self.package_manager,
                "-q",
-               "-y",
                "clean",
                "expire-cache"]
         ret_code, stdout, stderr = self.run_cmd(cmd)
@@ -64,9 +63,11 @@ class DNF(PackageManager):
 
         cmd = [self.package_manager,
                "-q",
-               "-y",
                "check-update"]
         ret_code, stdout, stderr = self.run_cmd(cmd)
+        # ret_code == 100 is not an error
+        # It means there are packages to be updated
+        ret_code = ret_code if ret_code != 100 else 0
         exit_code = max(ret_code, exit_code)
         out += stdout
         err += stderr

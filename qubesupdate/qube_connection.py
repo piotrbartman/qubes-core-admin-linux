@@ -114,7 +114,7 @@ class QubeConnection:
 
     @staticmethod
     def _run_shell_command_in_qube(target, command, force_color=False):
-        p = target.run_service('qubes.VMRootShell')
+        p = target.run_service('qubes.VMRootShell', user='root')
         untrusted_stdout_and_stderr = p.communicate(command.encode())
         return (p.returncode,
                 QubeConnection._collect_output(
