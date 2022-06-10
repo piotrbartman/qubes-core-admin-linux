@@ -70,7 +70,7 @@ class PackageManager:
                 print(stdout)
                 print(stderr, file=sys.stderr)
                 if hard_fail:
-                    return 199
+                    return 1
             exit_code = max(exit_code, ret_code)
 
         curr_pkg = self.get_packages()
@@ -85,15 +85,12 @@ class PackageManager:
                     return 2
             exit_code = max(exit_code, ret_code)
 
-        options = []  # TODO self.parse_options(*upgrade_args)
-
-        cmd = [self.package_manager,
-               "-q",
-               "-y",
-               *options,
-               *self.get_action(remove_obsolete)]
-
-        ret_code, stdout, stderr = self.run_cmd(cmd)  # TODO sync progress
+        ret_code, stdout, stderr = self.upgrade_internal(remove_obsolete)
+        if ret_code != 0:
+            print(stdout)
+            print(stderr, file=sys.stderr)
+            if hard_fail:
+                return 3
         exit_code = max(exit_code, ret_code)
 
         new_pkg = self.get_packages()
@@ -211,11 +208,16 @@ class PackageManager:
         """
         raise NotImplementedError()
 
-    def parse_options(self, *args, **kwargs) -> List[str]:
+    def upgrade_internal(self, remove_obsolete: bool) -> Tuple[int, str, str]:
         """
-        Parse extra options for package manager.
+        Just run upgrade.
         """
-        raise NotImplementedError()
+        cmd = [self.package_manager,
+               "-y",
+               *self.get_action(remove_obsolete)]
+
+        ret_code, stdout, stderr = self.run_cmd(cmd)
+        return ret_code, stdout, stderr
 
     def get_action(self, remove_obsolete: bool) -> str:
         """

@@ -5,8 +5,6 @@ from typing import Dict
 
 import pkg_resources
 
-from apt import APT
-from dnf import DNF
 from utils import get_os_data
 
 
@@ -22,19 +20,21 @@ def main(args=None):
     upgrade_args = []
 
     if os_data["os_family"] == "Debian":
+        from apt_package_manager import APT
         if os_data["codename"] == "buster":
             # https://bugs.debian.org/931566
             # Apply the workaround manually, to be able to pull in the fixed
             # apt version
-            refresh_args.append("--allow-releaseinfo-change")
-
+            allow_releaseinfo_change()
         pkg_mng = APT()
     elif os_data["os_family"] == "RedHat":
+        from dnf_package_manager import DNF
         manage_rpm_macro(os_data, requirements)
         disable_deltarpm()
         pkg_mng = DNF()
     else:
-        raise NotImplementedError()
+        raise NotImplementedError(
+            "Only Debian and RedHat based os is supported.")
 
     return_code = pkg_mng.upgrade(refresh=True,
                                   hard_fail=True,
@@ -44,9 +44,14 @@ def main(args=None):
                                   upgrade_args=upgrade_args)
     # TODO
     with open(pkg_mng.log_path) as f:
-        print("\n".join(f.readlines()))
+        print("".join(f.readlines()))
 
     return return_code
+
+
+def allow_releaseinfo_change(apt_conf="/etc/apt/apt.conf"):
+    with open(apt_conf, "a+") as f:  # TODO: do not append if present
+        f.write('\nAcquire::AllowReleaseInfoChange "false";\n')
 
 
 def manage_rpm_macro(os_data, requirements: Dict[str, str]):
@@ -62,9 +67,9 @@ def manage_rpm_macro(os_data, requirements: Dict[str, str]):
         requirements.update({"dnf": "4.7.0", "rpm": "4.14.2"})
 
 
-def disable_deltarpm():
+def disable_deltarpm(dnf_conf="/etc/dnf/dnf.conf"):
     # TODO dnf makecache
-    with open("/etc/dnf/dnf.conf", "a") as f:
+    with open(dnf_conf, "a+") as f:  # TODO: do not append if present
         f.write("\ndeltarpm=False\n")
 
 
