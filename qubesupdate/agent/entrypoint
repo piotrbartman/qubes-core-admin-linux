@@ -20,7 +20,12 @@ def main(args=None):
     upgrade_args = []
 
     if os_data["os_family"] == "Debian":
-        from apt_package_manager import APT
+        try:
+            from apt_api import APT
+        except ImportError:
+            # no progress reporting
+            from apt_cli import APTCLI as APT
+
         if os_data["codename"] == "buster":
             # https://bugs.debian.org/931566
             # Apply the workaround manually, to be able to pull in the fixed
@@ -28,7 +33,12 @@ def main(args=None):
             allow_releaseinfo_change()
         pkg_mng = APT()
     elif os_data["os_family"] == "RedHat":
-        from dnf_package_manager import DNF
+        try:
+            from dnf_api import DNF
+        except ImportError:
+            # no progress reporting
+            from dnf_cli import DNFCLI as DNF
+
         manage_rpm_macro(os_data, requirements)
         disable_deltarpm()
         pkg_mng = DNF()
@@ -36,12 +46,14 @@ def main(args=None):
         raise NotImplementedError(
             "Only Debian and RedHat based os is supported.")
 
+    # TODO config here
     return_code = pkg_mng.upgrade(refresh=True,
                                   hard_fail=True,
                                   remove_obsolete=True,
                                   requirements=requirements,
                                   refresh_args=refresh_args,
                                   upgrade_args=upgrade_args)
+    # TODO clean config
     # TODO
     with open(pkg_mng.log_path) as f:
         print("".join(f.readlines()))
@@ -68,6 +80,11 @@ def manage_rpm_macro(os_data, requirements: Dict[str, str]):
 
 
 def disable_deltarpm(dnf_conf="/etc/dnf/dnf.conf"):
+    """
+
+    :param dnf_conf:
+    :return:
+    """
     # TODO dnf makecache
     with open(dnf_conf, "a+") as f:  # TODO: do not append if present
         f.write("\ndeltarpm=False\n")

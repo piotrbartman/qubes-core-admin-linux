@@ -26,7 +26,7 @@ import sys
 from typing import Optional, Dict, List, Tuple
 
 FORMAT_LOG = '%(message)s'
-LOGPATH = '/tmp/qubesupdate'  # TODO
+LOGPATH = '/tmp/qubesupdate'
 formatter_log = logging.Formatter(FORMAT_LOG)
 
 

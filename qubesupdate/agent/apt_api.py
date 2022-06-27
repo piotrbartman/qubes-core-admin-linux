@@ -20,14 +20,15 @@
 # USA.
 
 import os
-import apt
-import apt.progress.base
 from typing import List, Tuple, Callable, Optional
 
-from package_manager import PackageManager
+import apt
+import apt.progress.base
+
+from apt_cli import APTCLI
 
 
-class APT(PackageManager):
+class APT(APTCLI):
     def __init__(self):
         super().__init__()
         self.package_manager: str = "apt-get"
@@ -49,29 +50,6 @@ class APT(PackageManager):
         ret_code = 0 if success else 1
         return ret_code, "", ""
 
-    def get_packages(self):
-        """
-        Use dpkg-query to return the installed packages and their versions.
-        """
-        cmd = [
-            "dpkg-query",
-            "--showformat",
-            "${Status} ${Package} ${Version}\n",
-            "-W",
-        ]
-        # EXAMPLE OUTPUT:
-        # install ok installed qubes-core-agent 4.1.35-1+deb11u1
-        ret_code, stdout, stderr = self.run_cmd(cmd)
-
-        packages = {}
-        for line in stdout.splitlines():
-            cols = line.split()
-            selection, flag, status, package, version = cols
-            if selection in ("install", "hold") and status == "installed":
-                packages.setdefault(package, []).append(version)
-
-        return packages
-
     def upgrade_internal(self, remove_obsolete: bool) -> Tuple[int, str, str]:
         """
         Use `apt` package to upgrade and track progress.
@@ -84,12 +62,6 @@ class APT(PackageManager):
             return 1, "", str(exc)
 
         return 0, self.progress.stdout, self.progress.stderr
-
-    def get_action(self, remove_obsolete: bool) -> List[str]:
-        """
-        Return command `upgrade` or `dist-upgrade` if `remove_obsolete`.
-        """
-        return ["dist-upgrade"] if remove_obsolete else ["upgrade"]
 
 
 class APTProgressReporter:
@@ -121,7 +93,7 @@ class APTProgressReporter:
         """
         Report ongoing progress.
         """
-        _percent = start + percent * (stop - start)
+        _percent = start + percent * (stop - start) / 100
         if self.last_percent + 1 <= _percent:
             self.callback(_percent)
             self.last_percent = round(_percent)
@@ -164,5 +136,5 @@ class APTProgressReporter:
             """
             Write an error message to the fake stderr.
             """
-            self.stderr += "Error during installation " + str(pkg) + ":"\
-                        + str(errormsg) + "\n"
+            self.stderr += "Error during installation " + str(pkg) + ":" \
+                           + str(errormsg) + "\n"
