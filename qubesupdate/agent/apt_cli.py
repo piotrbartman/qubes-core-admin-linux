@@ -42,6 +42,9 @@ class APTCLI(PackageManager):
         """
         cmd = [self.package_manager, "-q", "update"]
         ret_code, stdout, stderr = self.run_cmd(cmd)
+        out_lines = stdout.splitlines()
+        if any(line.startswith("Err:") for line in out_lines):
+            ret_code = 1
         return ret_code, stdout, stderr
 
     def get_packages(self):

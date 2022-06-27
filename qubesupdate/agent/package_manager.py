@@ -66,11 +66,10 @@ class PackageManager:
 
         if refresh:
             ret_code, stdout, stderr = self.refresh(refresh_args)
+            self.log_output("Refresh package data", stdout, stderr)
             if ret_code != 0:
-                print(stdout)
-                print(stderr, file=sys.stderr)
                 if hard_fail:
-                    return 1
+                    return ret_code
             exit_code = max(exit_code, ret_code)
 
         curr_pkg = self.get_packages()
@@ -78,57 +77,30 @@ class PackageManager:
         if requirements:
             ret_code, stdout, stderr = self.install_requirements(
                 requirements, curr_pkg)
+            self.log_output("Installing requirements", stdout, stderr)
             if ret_code != 0:
-                print(stdout)
-                print(stderr, file=sys.stderr)
                 if hard_fail:
-                    return 2
+                    return ret_code
             exit_code = max(exit_code, ret_code)
 
         ret_code, stdout, stderr = self.upgrade_internal(remove_obsolete)
-        if ret_code != 0:
-            print(stdout)
-            print(stderr, file=sys.stderr)
-            if hard_fail:
-                return 3
+        self.log_output("Upgrading", stdout, stderr)
         exit_code = max(exit_code, ret_code)
 
         new_pkg = self.get_packages()
 
         changes = PackageManager.compare_packages(old=curr_pkg, new=new_pkg)
-
-        self.log.info("Installed packages:")
-        for pkg in changes["installed"]:
-            self.log.info("%s %s", pkg, changes["installed"][pkg])
-        self.log.info("Updated packages:")
-        for pkg in changes["updated"]:
-            self.log.info("%s %s->%s",
-                          pkg,
-                          changes["updated"][pkg]["old"],
-                          changes["updated"][pkg]["new"]
-                          )
-        self.log.info("Removed packages:")
-        for pkg in changes["removed"]:
-            self.log.info("%s %s", pkg, changes["removed"][pkg])
+        self.log_changes(changes)
 
         return exit_code
 
-    def run_cmd(self, command: List[str]) -> Tuple[int, str, str]:
-        """
-        Run command and wait.
-
-        :param command: command to execute
-        :return: (exit_code, stdout, stderr)
-        """
-        self.log.debug("agent command: %s", " ".join(command))
-        with subprocess.Popen(command,
-                              stdin=subprocess.PIPE,
-                              stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE) as p:
-            stdout, stderr = p.communicate()
-        self.log.debug("return code: %i", p.returncode)
-
-        return p.returncode, stdout.decode(), stderr.decode()
+    def log_output(self, title, stdout, stderr):
+        self.log.info(title)
+        if stdout:
+            self.log.info(stdout)
+        if stderr:
+            self.log.info("Errors:")
+            self.log.info(stderr)
 
     def install_requirements(
             self,
@@ -178,6 +150,23 @@ class PackageManager:
 
         return exit_code, out, err
 
+    def run_cmd(self, command: List[str]) -> Tuple[int, str, str]:
+        """
+        Run command and wait.
+
+        :param command: command to execute
+        :return: (exit_code, stdout, stderr)
+        """
+        self.log.debug("agent command: %s", " ".join(command))
+        with subprocess.Popen(command,
+                              stdin=subprocess.PIPE,
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE) as p:
+            stdout, stderr = p.communicate()
+        self.log.debug("return code: %i", p.returncode)
+
+        return p.returncode, stdout.decode(), stderr.decode()
+
     @staticmethod
     def compare_packages(old, new):
         """
@@ -192,6 +181,21 @@ class PackageManager:
                             if pkg in old and old[pkg] != new[pkg]
                             },
                 "removed": {pkg: old[pkg] for pkg in old if pkg not in new}}
+
+    def log_changes(self, changes):
+        self.log.info("Installed packages:")
+        for pkg in changes["installed"]:
+            self.log.info("%s %s", pkg, changes["installed"][pkg])
+        self.log.info("Updated packages:")
+        for pkg in changes["updated"]:
+            self.log.info("%s %s->%s",
+                          pkg,
+                          changes["updated"][pkg]["old"],
+                          changes["updated"][pkg]["new"]
+                          )
+        self.log.info("Removed packages:")
+        for pkg in changes["removed"]:
+            self.log.info("%s %s", pkg, changes["removed"][pkg])
 
     def refresh(self, refresh_args: List[str] = ()) -> Tuple[int, str, str]:
         """
@@ -208,9 +212,15 @@ class PackageManager:
         """
         raise NotImplementedError()
 
+    def get_action(self, remove_obsolete: bool) -> str:
+        """
+        Return command for upgrade or upgrade with removing obsolete packages.
+        """
+        raise NotImplementedError()
+
     def upgrade_internal(self, remove_obsolete: bool) -> Tuple[int, str, str]:
         """
-        Just run upgrade.
+        Just run upgrade via CLI.
         """
         cmd = [self.package_manager,
                "-y",
@@ -218,9 +228,3 @@ class PackageManager:
 
         ret_code, stdout, stderr = self.run_cmd(cmd)
         return ret_code, stdout, stderr
-
-    def get_action(self, remove_obsolete: bool) -> str:
-        """
-        Return command for upgrade or upgrade with removing obsolete packages.
-        """
-        raise NotImplementedError()

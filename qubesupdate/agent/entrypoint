@@ -12,7 +12,7 @@ def main(args=None):
     """
     Run the appropriate package manager.
 
-    :param args: args passed directly to package manager
+    :param args: # TODO
     """
     os_data = get_os_data()
     requirements = {}

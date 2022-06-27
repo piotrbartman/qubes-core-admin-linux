@@ -69,6 +69,10 @@ class DNFCLI(PackageManager):
         out += stdout
         err += stderr
 
+        out_lines = (out + err).splitlines()
+        if any(line.startswith("Error:") for line in out_lines):
+            exit_code = 1
+
         return exit_code, out, err
 
     def get_packages(self):
