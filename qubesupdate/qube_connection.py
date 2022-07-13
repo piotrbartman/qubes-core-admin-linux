@@ -21,7 +21,9 @@
 
 import os
 import time
-from os.path import join, isfile
+from os.path import join
+import shutil
+import tempfile
 
 
 class QubeConnection:
@@ -74,23 +76,25 @@ class QubeConnection:
         """
         assert self.__connected  # open the connection first
 
-        path_mapping = self._map_paths(src_dir)
+        agent_dir = tempfile.mkdtemp()
+        root_dir = os.path.dirname(src_dir)
+        base_dir = os.path.basename(src_dir.strip(os.sep))
+        shutil.make_archive(base_name=join(agent_dir, "agent"), format='gztar',
+                            root_dir=root_dir, base_dir=base_dir)
 
-        command = "qvm-run --pass-io {} 'mkdir -p {}'\n".format(
-            self.qube, self.dest_dir)
-        for src_path, dest_path in path_mapping.items():
-            command_line = \
-                "cat {} | qvm-run --pass-io {} 'cat > {}'".format(
-                    src_path, self.qube, dest_path)
-            command += command_line + "\n"
+        command = f"qvm-run --pass-io {self.qube} 'mkdir -p {self.dest_dir}'\n"
+        src_arch = join(agent_dir, "agent.tar.gz")
+        dest_arch = join(self.dest_dir, "agent.tar.gz")
+        command_line = f"cat {src_arch} | " \
+                       f"qvm-run --pass-io {self.qube} 'cat > {dest_arch}'"
+        command += command_line + "\n"
+        command_line = f"qvm-run --pass-io {self.qube} " \
+                       f"'cd /tmp/qubesupdate; " \
+                       f"tar -xzf /tmp/qubesupdate/agent.tar.gz'"
+        command += command_line + "\n"
+
         self.logger.debug("RUN COMMAND: %s", command)
         os.system(command)
-
-    def _map_paths(self, src_dir):
-        result = {join(src_dir, file): join(self.dest_dir, file)
-                  for file in os.listdir(src_dir)
-                  if isfile(join(src_dir, file))}
-        return result
 
     def run_entrypoint(self, entrypoint_path, force_color, *args):
         """
@@ -102,9 +106,9 @@ class QubeConnection:
         """
         entrypoint_args = " ".join(args)
         command = 'chmod u+x {}\n{} {}'.format(  # TODO test
-                entrypoint_path,
-                entrypoint_path,
-                entrypoint_args
+            entrypoint_path,
+            entrypoint_path,
+            entrypoint_args
         )
         self.logger.debug("RUN COMMAND: %s", command)
         exit_code, output = QubeConnection._run_shell_command_in_qube(
@@ -116,6 +120,22 @@ class QubeConnection:
     @staticmethod
     def _run_shell_command_in_qube(target, command, force_color=False):
         p = target.run_service('qubes.VMRootShell', user='root')
+        # TODO print to console
+        #         p.stdin.write((command + "\n").encode())
+        #         p.stdin.close()
+        #         while True:
+        #             outline = p.stdout.readline()
+        #             errline = p.stderr.readline()
+        #             if not outline and not errline:
+        #                 break
+        #             if outline:
+        #                 print(outline.decode())
+        #             if errline:
+        #                 print(errline)
+        #         p.stdout.close()
+        #         p.stderr.close()
+        #         p.wait()
+        #         untrusted_stdout_and_stderr = ("".encode(), "".encode()) #p.communicate(command.encode())
         untrusted_stdout_and_stderr = p.communicate(command.encode())
         return (p.returncode,
                 QubeConnection._collect_output(

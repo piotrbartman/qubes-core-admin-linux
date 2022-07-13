@@ -29,7 +29,7 @@ from dnf_cli import DNFCLI
 class DNF(DNFCLI):
     def __init__(self):
         super().__init__()
-        pck_mng_path = shutil.which('dnf')
+        pck_mng_path = shutil.which('')
         if pck_mng_path is not None:
             pck_mngr = 'dnf'
         else:

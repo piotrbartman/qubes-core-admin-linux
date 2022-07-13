@@ -22,7 +22,7 @@
 import os
 from typing import List, Tuple
 
-from package_manager import PackageManager
+from source.common.package_manager import PackageManager
 
 
 class APTCLI(PackageManager):

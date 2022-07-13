@@ -22,7 +22,6 @@
 import os
 import logging
 import subprocess
-import sys
 from typing import Optional, Dict, List, Tuple
 
 FORMAT_LOG = '%(message)s'

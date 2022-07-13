@@ -2,9 +2,9 @@
 #
 # The Qubes OS Project, http://www.qubes-os.org
 #
+# Copyright (C) 2022  Piotr Bartman <prbartman@invisiblethingslab.com>
 # Copyright (C) 2022  Marek Marczykowski-Górecki
 #                                   <marmarek@invisiblethingslab.com>
-# Copyright (C) 2022  Piotr Bartman <prbartman@invisiblethingslab.com>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -103,12 +103,12 @@ class UpdateAgentManager:
     Send update agent files and run it in the qube.
     """
     AGENT_RELATIVE_DIR = "agent"
-    ENTRYPOINT = "entrypoint"
+    ENTRYPOINT = "agent/entrypoint"
     FORMAT_LOG = '%(asctime)s %(message)s'
     LOGPATH = '/var/log/qubes'
     WORKDIR = "/tmp/qubesupdate/"
 
-    def __init__(self, app, qube, force_color=False, loglevel='INFO'):
+    def __init__(self, app, qube, force_color=False, loglevel='DEBUG'):
         self.qube = qube
         self.app = app
         self.log = logging.getLogger('qubesupdate.qube.' + qube.name)
