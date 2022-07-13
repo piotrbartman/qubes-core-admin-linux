@@ -26,8 +26,8 @@ from source.common.package_manager import PackageManager
 
 
 class APTCLI(PackageManager):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, logpath):
+        super().__init__(logpath)
         self.package_manager: str = "apt-get"
 
         # to prevent a warning: `debconf: unable to initialize frontend: Dialog`

@@ -1,10 +1,16 @@
 #!/usr/bin/python3
+import os
 import sys
+
+from pathlib import Path
+
 from source.apt.configuration import get_configured_apt
 from source.dnf.configuration import get_configured_dnf
-
-
 from source.utils import get_os_data
+
+
+LOGPATH = '/var/log/qubes/qubes-update'
+Path(LOGPATH).mkdir(parents=True, exist_ok=True)
 
 
 def main(args=None):
@@ -19,9 +25,9 @@ def main(args=None):
     upgrade_args = []
 
     if os_data["os_family"] == "Debian":
-        pkg_mng = get_configured_apt(os_data, requirements)
+        pkg_mng = get_configured_apt(os_data, requirements, LOGPATH)
     elif os_data["os_family"] == "RedHat":
-        pkg_mng = get_configured_dnf(os_data, requirements)
+        pkg_mng = get_configured_dnf(os_data, requirements, LOGPATH)
     else:
         raise NotImplementedError(
             "Only Debian and RedHat based os is supported.")

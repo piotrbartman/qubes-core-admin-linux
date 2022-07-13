@@ -103,10 +103,10 @@ class UpdateAgentManager:
     Send update agent files and run it in the qube.
     """
     AGENT_RELATIVE_DIR = "agent"
-    ENTRYPOINT = "agent/entrypoint"
+    ENTRYPOINT = AGENT_RELATIVE_DIR + "/entrypoint"
     FORMAT_LOG = '%(asctime)s %(message)s'
     LOGPATH = '/var/log/qubes'
-    WORKDIR = "/tmp/qubesupdate/"
+    WORKDIR = "/run/qubes-update/"
 
     def __init__(self, app, qube, force_color=False, loglevel='DEBUG'):
         self.qube = qube

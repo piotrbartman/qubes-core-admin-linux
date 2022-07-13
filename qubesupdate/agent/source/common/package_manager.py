@@ -25,16 +25,15 @@ import subprocess
 from typing import Optional, Dict, List, Tuple
 
 FORMAT_LOG = '%(message)s'
-LOGPATH = '/tmp/qubesupdate'
 formatter_log = logging.Formatter(FORMAT_LOG)
 
 
 class PackageManager:
-    def __init__(self, loglevel="INFO"):
+    def __init__(self, logpath, loglevel="INFO"):
         self.package_manager: Optional[str] = None
         self.log = logging.getLogger('qubesupdate.agent.PackageManager')
         self.log.setLevel(loglevel)
-        self.log_path = os.path.join(LOGPATH, 'update-agent.log')
+        self.log_path = os.path.join(logpath, 'update-agent.log')
         handler_log = logging.FileHandler(self.log_path, encoding='utf-8')
         handler_log.setFormatter(formatter_log)
         self.log.addHandler(handler_log)
@@ -124,8 +123,7 @@ class PackageManager:
                 else:
                     to_upgrade[pkg] = version
         if to_install:
-            cmd = ["sudo",
-                   self.package_manager,
+            cmd = [self.package_manager,
                    "-q",
                    "-y",
                    "install",
@@ -136,8 +134,7 @@ class PackageManager:
             err += stderr
 
         if to_upgrade:
-            cmd = ["sudo",
-                   self.package_manager,
+            cmd = [self.package_manager,
                    "-q",
                    "-y",
                    *self.get_action(remove_obsolete=False),

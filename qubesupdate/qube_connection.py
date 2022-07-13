@@ -24,6 +24,7 @@ import time
 from os.path import join
 import shutil
 import tempfile
+from subprocess import CalledProcessError
 
 
 class QubeConnection:
@@ -51,11 +52,8 @@ class QubeConnection:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.logger.info('Remove %s', self.dest_dir)
-        exit_code, stdout_lines = self._run_shell_command_in_qube(
-            self.qube, 'rm -r {}'.format(self.dest_dir))
-        for line in stdout_lines:
-            self.logger.debug('Remove output: %s', line)
-        self.logger.debug('Remove exit code: %d', exit_code)
+        self._run_shell_command_in_qube(
+            self.qube, ['rm', '-r', self.dest_dir])
 
         if self.qube.is_running() and not self._initially_running:
             self.logger.info('Shutdown %s', self.qube.name)
@@ -76,23 +74,30 @@ class QubeConnection:
         """
         assert self.__connected  # open the connection first
 
-        agent_dir = tempfile.mkdtemp()
+        arch_format = ".tar.gz"
+
+        arch_dir = tempfile.mkdtemp()
         root_dir = os.path.dirname(src_dir)
         base_dir = os.path.basename(src_dir.strip(os.sep))
-        shutil.make_archive(base_name=join(agent_dir, "agent"), format='gztar',
-                            root_dir=root_dir, base_dir=base_dir)
+        src_arch = join(arch_dir, base_dir + arch_format)
+        dest_arch = join(self.dest_dir, base_dir + arch_format)
+        shutil.make_archive(base_name=join(arch_dir, base_dir),
+                            format='gztar', root_dir=root_dir,
+                            base_dir=base_dir)
 
-        command = f"qvm-run --pass-io {self.qube} 'mkdir -p {self.dest_dir}'\n"
-        src_arch = join(agent_dir, "agent.tar.gz")
-        dest_arch = join(self.dest_dir, "agent.tar.gz")
-        command_line = f"cat {src_arch} | " \
-                       f"qvm-run --pass-io {self.qube} 'cat > {dest_arch}'"
-        command += command_line + "\n"
-        command_line = f"qvm-run --pass-io {self.qube} " \
-                       f"'cd /tmp/qubesupdate; " \
-                       f"tar -xzf /tmp/qubesupdate/agent.tar.gz'"
-        command += command_line + "\n"
+        run_cmd = f"qvm-run --user=root --pass-io {self.qube} "
 
+        command = run_cmd + f"'mkdir -p {self.dest_dir}'\n"
+        self.logger.debug("RUN COMMAND: %s", command)
+        os.system(command)
+
+        command = f"cat {src_arch} | " + \
+                  run_cmd + f"'cat > {dest_arch}'"
+        self.logger.debug("RUN COMMAND: %s", command)
+        os.system(command)
+
+        command = run_cmd + f"'cd {self.dest_dir}; " \
+                            f"tar -xzf {dest_arch}'"
         self.logger.debug("RUN COMMAND: %s", command)
         os.system(command)
 
@@ -104,22 +109,33 @@ class QubeConnection:
         :param force_color: bool
         :return: Tuple[int, str]: return code and output of the script
         """
-        entrypoint_args = " ".join(args)
-        command = 'chmod u+x {}\n{} {}'.format(  # TODO test
-            entrypoint_path,
-            entrypoint_path,
-            entrypoint_args
-        )
+        # make sure entrypoint is executable
+        command = ['chmod', 'u+x', entrypoint_path]
         self.logger.debug("RUN COMMAND: %s", command)
-        exit_code, output = QubeConnection._run_shell_command_in_qube(
+        exit_code, output = self._run_shell_command_in_qube(
             self.qube, command, force_color
         )
 
+        # run entrypoint
+        command = [entrypoint_path, *args]
+        self.logger.debug("RUN COMMAND: %s", command)
+        exit_code_, output_ = self._run_shell_command_in_qube(
+            self.qube, command, force_color
+        )
+        exit_code = max(exit_code, exit_code_)
+        output += output_
+
         return exit_code, output
 
-    @staticmethod
-    def _run_shell_command_in_qube(target, command, force_color=False):
-        p = target.run_service('qubes.VMRootShell', user='root')
+    def _run_shell_command_in_qube(self, target, command, force_color=False):
+        try:
+            untrusted_stdout_and_stderr = target.run_with_args(*command,
+                                                               user='root')
+            returncode = 0
+        except CalledProcessError as e:
+            self.logger.error(str(e))
+            returncode = e.returncode
+            untrusted_stdout_and_stderr = (b"", b"")
         # TODO print to console
         #         p.stdin.write((command + "\n").encode())
         #         p.stdin.close()
@@ -136,11 +152,8 @@ class QubeConnection:
         #         p.stderr.close()
         #         p.wait()
         #         untrusted_stdout_and_stderr = ("".encode(), "".encode()) #p.communicate(command.encode())
-        untrusted_stdout_and_stderr = p.communicate(command.encode())
-        return (p.returncode,
-                QubeConnection._collect_output(
-                    *untrusted_stdout_and_stderr, force_color=force_color)
-                )
+        return returncode, QubeConnection._collect_output(
+            *untrusted_stdout_and_stderr, force_color=force_color)
 
     @staticmethod
     def _collect_output(untrusted_stdout,
