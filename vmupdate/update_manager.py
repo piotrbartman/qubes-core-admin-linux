@@ -111,7 +111,7 @@ class UpdateAgentManager:
     def __init__(self, app, qube, force_color=False, loglevel='DEBUG'):
         self.qube = qube
         self.app = app
-        self.log = logging.getLogger('qubesupdate.qube.' + qube.name)
+        self.log = logging.getLogger('update-vmqvm-update.qube.' + qube.name)
         self.log_path = os.path.join(
             UpdateAgentManager.LOGPATH, f'update-{qube.name}.log')
         handler_log = logging.FileHandler(

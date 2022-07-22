@@ -31,7 +31,7 @@ formatter_log = logging.Formatter(FORMAT_LOG)
 class PackageManager:
     def __init__(self, logpath, loglevel="INFO"):
         self.package_manager: Optional[str] = None
-        self.log = logging.getLogger('qubesupdate.agent.PackageManager')
+        self.log = logging.getLogger('update-vmqvm-update.agent.PackageManager')
         self.log.setLevel(loglevel)
         self.log_path = os.path.join(logpath, 'update-agent.log')
         handler_log = logging.FileHandler(self.log_path, encoding='utf-8')
