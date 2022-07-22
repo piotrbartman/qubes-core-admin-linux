@@ -105,7 +105,7 @@ class QubeConnection:
         """
         Run a script in the qube.
 
-        :param entrypoint_path: str: path to the entrypoint in the qube
+        :param entrypoint_path: str: path to the entrypoint.py in the qube
         :param force_color: bool
         :return: Tuple[int, str]: return code and output of the script
         """

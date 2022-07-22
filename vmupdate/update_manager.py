@@ -29,7 +29,7 @@ from os.path import join
 
 import qubesadmin.vm
 import qubesadmin.exc
-from qube_connection import QubeConnection
+from .qube_connection import QubeConnection
 
 
 class UpdateManager:
@@ -103,7 +103,7 @@ class UpdateAgentManager:
     Send update agent files and run it in the qube.
     """
     AGENT_RELATIVE_DIR = "agent"
-    ENTRYPOINT = AGENT_RELATIVE_DIR + "/entrypoint"
+    ENTRYPOINT = AGENT_RELATIVE_DIR + "/entrypoint.py"
     FORMAT_LOG = '%(asctime)s %(message)s'
     LOGPATH = '/var/log/qubes'
     WORKDIR = "/run/qubes-update/"

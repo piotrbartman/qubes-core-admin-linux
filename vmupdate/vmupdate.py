@@ -6,7 +6,7 @@ import sys
 import argparse
 
 import qubesadmin
-import update_manager
+from . import update_manager
 
 
 def main(args=None):
