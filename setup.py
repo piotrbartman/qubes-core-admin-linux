@@ -28,6 +28,6 @@ if __name__ == '__main__':
         packages=setuptools.find_packages(include=("vmupdate", "vmupdate*")),
         entry_points={
             'console_scripts':
-                'vmupdate.py = vmupdate.vmupdate:main',
+                'qubes-vm-update = vmupdate.vmupdate:main',
         },
     )
