@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+import argparse
 import os
 import sys
 
@@ -13,21 +14,34 @@ LOGPATH = '/var/log/qubes/qubes-update'
 Path(LOGPATH).mkdir(parents=True, exist_ok=True)
 
 
+def parse_args(args):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--log', action='store', default="INFO",
+                        help='Provide logging level. '
+                             'Values: DEBUG, INFO (default) WARNING, ERROR, '
+                             'CRITICAL')
+
+    args = parser.parse_args(args)
+
+    return args
+
+
 def main(args=None):
     """
     Run the appropriate package manager.
 
     :param args: # TODO
     """
+    args = parse_args(args)
     os_data = get_os_data()
     requirements = {}
     refresh_args = []
     upgrade_args = []
 
     if os_data["os_family"] == "Debian":
-        pkg_mng = get_configured_apt(os_data, requirements, LOGPATH)
+        pkg_mng = get_configured_apt(os_data, requirements, LOGPATH, args.log)
     elif os_data["os_family"] == "RedHat":
-        pkg_mng = get_configured_dnf(os_data, requirements, LOGPATH)
+        pkg_mng = get_configured_dnf(os_data, requirements, LOGPATH, args.log)
     else:
         raise NotImplementedError(
             "Only Debian and RedHat based os is supported.")
@@ -40,9 +54,6 @@ def main(args=None):
                                   refresh_args=refresh_args,
                                   upgrade_args=upgrade_args)
     # TODO clean config
-    # TODO
-    with open(pkg_mng.log_path) as f:
-        print("".join(f.readlines()))
 
     return return_code
 

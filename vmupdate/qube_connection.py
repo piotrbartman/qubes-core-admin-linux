@@ -38,9 +38,10 @@ class QubeConnection:
        stop the qube if it was started by this connection.
     """
 
-    def __init__(self, qube, dest_dir, logger):
+    def __init__(self, qube, dest_dir, cleanup, logger):
         self.qube = qube
         self.dest_dir = dest_dir
+        self.cleanup = cleanup
         self.logger = logger
         self._initially_running = None
         self.__connected = False
@@ -51,9 +52,10 @@ class QubeConnection:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.logger.info('Remove %s', self.dest_dir)
-        self._run_shell_command_in_qube(
-            self.qube, ['rm', '-r', self.dest_dir])
+        if self.cleanup:
+            self.logger.info('Remove %s', self.dest_dir)
+            self._run_shell_command_in_qube(
+                self.qube, ['rm', '-r', self.dest_dir])
 
         if self.qube.is_running() and not self._initially_running:
             self.logger.info('Shutdown %s', self.qube.name)
@@ -85,7 +87,7 @@ class QubeConnection:
                             format='gztar', root_dir=root_dir,
                             base_dir=base_dir)
 
-        run_cmd = f"qvm-run --user=root --pass-io {self.qube} "
+        run_cmd = f"qvm-run --user=root --pass-io {self.qube.name} "
 
         command = run_cmd + f"'mkdir -p {self.dest_dir}'\n"
         self.logger.debug("RUN COMMAND: %s", command)
@@ -101,7 +103,7 @@ class QubeConnection:
         self.logger.debug("RUN COMMAND: %s", command)
         os.system(command)
 
-    def run_entrypoint(self, entrypoint_path, force_color, *args):
+    def run_entrypoint(self, entrypoint_path, force_color, **kwargs):
         """
         Run a script in the qube.
 
@@ -117,7 +119,9 @@ class QubeConnection:
         )
 
         # run entrypoint
-        command = [entrypoint_path, *args]
+        cli_args = [("--" + k, v) for k, v in kwargs.items()]
+        cli_args = sum(cli_args, ())  # [(a, 0), (b, 1)] -> [a, 0, b, 1]
+        command = [entrypoint_path, *cli_args]
         self.logger.debug("RUN COMMAND: %s", command)
         exit_code_, output_ = self._run_shell_command_in_qube(
             self.qube, command, force_color

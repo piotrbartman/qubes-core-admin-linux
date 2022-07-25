@@ -37,12 +37,14 @@ class UpdateManager:
     Update multiple qubes simultaneously.
     """
 
-    def __init__(self, qubes, max_concurrency=4, show_output=False,
-                 force_color=False):
+    def __init__(self, qubes, max_concurrency, show_output,
+                 force_color, cleanup, loglevel):
         self.qubes = qubes
         self.max_concurrency = max_concurrency
         self.show_output = show_output
         self.force_color = force_color
+        self.cleanup = cleanup
+        self.loglevel = loglevel
         self.exit_code = 0
 
     def run(self):
@@ -51,11 +53,12 @@ class UpdateManager:
         """
         pool = multiprocessing.Pool(self.max_concurrency)
         for qube in self.qubes:
-            pool.apply_async(update_qube,
-                             (qube.name, self.show_output,
-                              self.force_color),
-                             callback=self.collect_result
-                             )
+            pool.apply_async(
+                update_qube,
+                (qube.name, self.show_output, self.force_color, self.cleanup,
+                 self.loglevel),
+                callback=self.collect_result
+            )
         pool.close()
         pool.join()
         return self.exit_code
@@ -76,13 +79,15 @@ class UpdateManager:
             print(qube_name + ": " + result)
 
 
-def update_qube(qname, show_output, force_color):
+def update_qube(qname, show_output, force_color, cleanup, loglevel):
     """
     Create and run `UpdateAgentManager` for qube.
 
     :param qname: name of qube
     :param show_output: flag, if true print full output
     :param force_color: flag, if true do not sanitize output
+    :param cleanup: flag, if true updater files will be removed from the qube
+    :param loglevel: logging level inside the qube
     :return:
     """
     app = qubesadmin.Qubes()
@@ -91,8 +96,15 @@ def update_qube(qname, show_output, force_color):
     except KeyError:
         return qname, 2, "ERROR (qube not found)"
     try:
-        runner = UpdateAgentManager(app, qube, force_color=force_color)
-        exit_code, result = runner.run_agent(return_output=show_output)
+        runner = UpdateAgentManager(
+            app,
+            qube,
+            force_color=force_color,
+            cleanup=cleanup,
+            loglevel=loglevel,
+        )
+        exit_code, result = runner.run_agent(
+            return_output=show_output, log=loglevel)
     except Exception as e:  # pylint: disable=broad-except
         return qname, 1, "ERROR (exception {})".format(str(e))
     return qube.name, exit_code, result
@@ -108,7 +120,8 @@ class UpdateAgentManager:
     LOGPATH = '/var/log/qubes'
     WORKDIR = "/run/qubes-update/"
 
-    def __init__(self, app, qube, force_color=False, loglevel='DEBUG'):
+    def __init__(
+            self, app, qube, force_color=False, cleanup=True, loglevel='DEBUG'):
         self.qube = qube
         self.app = app
         self.log = logging.getLogger('update-vmqvm-update.qube.' + qube.name)
@@ -123,15 +136,16 @@ class UpdateAgentManager:
         self.log.setLevel(loglevel)
         self.log.propagate = False
         self.force_color = force_color
+        self.cleanup = cleanup
 
-    def run_agent(self, return_output, *args):
+    def run_agent(self, return_output, **kwargs):
         self.log.debug('Running update agent for {}'.format(self.qube.name))
         dest_dir = UpdateAgentManager.WORKDIR
         dest_agent = os.path.join(dest_dir, UpdateAgentManager.ENTRYPOINT)
         this_dir = os.path.dirname(os.path.realpath(__file__))
         src_dir = join(this_dir, UpdateAgentManager.AGENT_RELATIVE_DIR)
 
-        with QubeConnection(self.qube, dest_dir, self.log) as qc:
+        with QubeConnection(self.qube, dest_dir, self.cleanup, self.log) as qc:
             self.log.debug("Transferring files to destination qube: {}".format(
                 self.qube.name))
             qc.transfer_agent(src_dir)
@@ -139,11 +153,18 @@ class UpdateAgentManager:
             self.log.debug("The agent is starting the task in qube: {}".format(
                 self.qube.name))
             exit_code, output = qc.run_entrypoint(
-                dest_agent, self.force_color, *args)
+                dest_agent, self.force_color, **kwargs)
 
             for line in output:
                 self.log.info('agent output: %s', line)
             self.log.info('agent exit code: %d', exit_code)
+
+            run_cmd = f"qvm-run --user=root --pass-io {self.qube} "
+            command = run_cmd + \
+                "'cat /var/log/qubes/qubes-update/update-agent.log' " \
+                f">> {self.log_path.replace('.log', '.agent.log')}"
+            self.log.debug("RUN COMMAND: %s", command)
+            os.system(command)
 
             if return_output and output:
                 return_data = output

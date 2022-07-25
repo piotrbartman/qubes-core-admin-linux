@@ -27,8 +27,8 @@ from dnf_cli import DNFCLI
 
 
 class DNF(DNFCLI):
-    def __init__(self, logpath):
-        super().__init__(logpath)
+    def __init__(self, logpath, loglevel):
+        super().__init__(logpath, loglevel)
         pck_mng_path = shutil.which('dnf')
         if pck_mng_path is not None:
             pck_mngr = 'dnf'

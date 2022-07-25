@@ -32,7 +32,11 @@ class PackageManager:
     def __init__(self, logpath, loglevel="INFO"):
         self.package_manager: Optional[str] = None
         self.log = logging.getLogger('update-vmqvm-update.agent.PackageManager')
-        self.log.setLevel(loglevel)
+        try:
+            # if loglevel is unknown just use `DEBUG`
+            self.log.setLevel(loglevel)
+        except Exception:
+            self.log.setLevel("DEBUG")
         self.log_path = os.path.join(logpath, 'update-agent.log')
         handler_log = logging.FileHandler(self.log_path, encoding='utf-8')
         handler_log.setFormatter(formatter_log)

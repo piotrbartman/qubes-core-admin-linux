@@ -29,8 +29,8 @@ from apt_cli import APTCLI
 
 
 class APT(APTCLI):
-    def __init__(self, logpath):
-        super().__init__(logpath)
+    def __init__(self, logpath, loglevel):
+        super().__init__(logpath, loglevel)
         self.package_manager: str = "apt-get"
         self.apt_cache = apt.cache.Cache()
         self.progress = APTProgressReporter()
