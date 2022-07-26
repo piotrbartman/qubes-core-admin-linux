@@ -58,7 +58,7 @@ class QubeConnection:
                 self.qube, ['rm', '-r', self.dest_dir])
 
         if self.qube.is_running() and not self._initially_running:
-            self.logger.info('Shutdown %s', self.qube.name)
+            self.logger.info('Shutdown %s\n', self.qube.name)
             self.qube.shutdown()
             # FIXME: convert to self.vm.shutdown(wait=True) in core3
             while self.qube.is_running():
@@ -89,7 +89,7 @@ class QubeConnection:
 
         run_cmd = f"qvm-run --user=root --pass-io {self.qube.name} "
 
-        command = run_cmd + f"'mkdir -p {self.dest_dir}'\n"
+        command = run_cmd + f"'mkdir -p {self.dest_dir}'"
         self.logger.debug("RUN COMMAND: %s", command)
         os.system(command)
 

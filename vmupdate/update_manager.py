@@ -121,7 +121,7 @@ class UpdateAgentManager:
     WORKDIR = "/run/qubes-update/"
 
     def __init__(
-            self, app, qube, force_color=False, cleanup=True, loglevel='DEBUG'):
+            self, app, qube, force_color=False, cleanup=True, loglevel='INFO'):
         self.qube = qube
         self.app = app
         self.log = logging.getLogger('update-vmqvm-update.qube.' + qube.name)

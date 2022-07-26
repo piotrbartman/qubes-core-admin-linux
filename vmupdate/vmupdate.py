@@ -33,8 +33,10 @@ def parse_args(args):
                         help='Do not upgrade if refresh fails')  # TODO
     parser.add_argument('--remove-obsolete', action='store_true',
                         help='Remove obsolete packages during upgrading')  # TODO
-    parser.add_argument('--no-cleanup', action='store_false',
-                        help='Do not remove updater files from target qube')
+    parser.add_argument('--log', action='store', default="INFO",
+                        help='Provide logging level. '
+                             'Values: DEBUG, INFO (default) WARNING, ERROR, '
+                             'CRITICAL')
 
     parser.add_argument('--show-output', action='store_true',
                         help='Show output of management commands')
@@ -45,10 +47,9 @@ def parse_args(args):
                         help='Maximum number of VMs configured simultaneously '
                              '(default: %(default)d)',
                         type=int, default=4)
-    parser.add_argument('--log', action='store', default="INFO",
-                        help='Provide logging level. '
-                             'Values: DEBUG, INFO (default) WARNING, ERROR, '
-                             'CRITICAL')
+    parser.add_argument('--no-cleanup', action='store_false',
+                        help='Do not remove updater files from target qube')
+
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--targets', action='store',
