@@ -7,6 +7,7 @@ import argparse
 
 import qubesadmin
 from . import update_manager
+from .agent.args import add_arguments
 
 
 def main(args=None):
@@ -26,6 +27,7 @@ def main(args=None):
 
 def parse_args(args):
     parser = argparse.ArgumentParser()
+
     parser.add_argument('--no-refresh', action='store_false',
                         help='Do not refresh available package before '
                              'upgrading')  # TODO
@@ -33,10 +35,6 @@ def parse_args(args):
                         help='Do not upgrade if refresh fails')  # TODO
     parser.add_argument('--remove-obsolete', action='store_true',
                         help='Remove obsolete packages during upgrading')  # TODO
-    parser.add_argument('--log', action='store', default="INFO",
-                        help='Provide logging level. '
-                             'Values: DEBUG, INFO (default) WARNING, ERROR, '
-                             'CRITICAL')
 
     parser.add_argument('--show-output', action='store_true',
                         help='Show output of management commands')
@@ -63,6 +61,8 @@ def parse_args(args):
                         help='Target all StandaloneVMs')
     parser.add_argument('--app', action='store_true',
                         help='Target all AppVMs')
+
+    add_arguments(parser)
     args = parser.parse_args(args)
 
     # if args.show_output and args.force_color:  # TODO check force color for apt/dnf/yum etc.
