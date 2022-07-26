@@ -4,7 +4,7 @@ import sys
 
 from pathlib import Path
 
-from .args import add_arguments
+from source.args import add_arguments
 from source.apt.configuration import get_configured_apt
 from source.dnf.configuration import get_configured_dnf
 from source.utils import get_os_data

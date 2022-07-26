@@ -7,7 +7,7 @@ import argparse
 
 import qubesadmin
 from . import update_manager
-from .agent.args import add_arguments
+from .agent.source.args import add_arguments
 
 
 def main(args=None):
@@ -45,7 +45,7 @@ def parse_args(args):
                         help='Maximum number of VMs configured simultaneously '
                              '(default: %(default)d)',
                         type=int, default=4)
-    parser.add_argument('--no-cleanup', action='store_false',
+    parser.add_argument('--no-cleanup', action='store_true',
                         help='Do not remove updater files from target qube')
 
 
