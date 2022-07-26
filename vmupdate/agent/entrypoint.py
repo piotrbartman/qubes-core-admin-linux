@@ -30,8 +30,6 @@ def main(args=None):
     args = parse_args(args)
     os_data = get_os_data()
     requirements = {}
-    refresh_args = []
-    upgrade_args = []
 
     if os_data["os_family"] == "Debian":
         pkg_mng = get_configured_apt(os_data, requirements, LOGPATH, args.log)
@@ -42,12 +40,11 @@ def main(args=None):
             "Only Debian and RedHat based os is supported.")
 
     # TODO config here
-    return_code = pkg_mng.upgrade(refresh=True,
-                                  hard_fail=True,
-                                  remove_obsolete=True,
-                                  requirements=requirements,
-                                  refresh_args=refresh_args,
-                                  upgrade_args=upgrade_args)
+    return_code = pkg_mng.upgrade(refresh=args.refresh,
+                                  hard_fail=args.force_refresh,
+                                  remove_obsolete=args.remove_obsolete,
+                                  requirements=requirements
+                                  )
     # TODO clean config
 
     return return_code

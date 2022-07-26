@@ -24,7 +24,7 @@ import logging
 import subprocess
 from typing import Optional, Dict, List, Tuple
 
-FORMAT_LOG = '%(message)s'
+FORMAT_LOG = '%(asctime)s %(message)s'
 formatter_log = logging.Formatter(FORMAT_LOG)
 
 
@@ -48,9 +48,7 @@ class PackageManager:
             refresh: bool,
             hard_fail: bool,
             remove_obsolete: bool,
-            requirements: Optional[Dict[str, str]] = None,
-            refresh_args: List[str] = (),
-            upgrade_args: List[str] = ()
+            requirements: Optional[Dict[str, str]] = None
     ):
         """
         Upgrade packages using system package manager.
@@ -60,14 +58,12 @@ class PackageManager:
                           stop and fail
         :param remove_obsolete: remove obsolete packages
         :param requirements: packages versions required before full upgrade
-        :param refresh_args: arguments pass to package manager during refresh
-        :param upgrade_args: arguments pass to package manager during upgrade
         :return: return code
         """
         exit_code = 0
 
         if refresh:
-            ret_code, stdout, stderr = self.refresh(refresh_args)
+            ret_code, stdout, stderr = self.refresh()
             self.log_output("Refresh package data", stdout, stderr)
             if ret_code != 0:
                 if hard_fail:
@@ -197,11 +193,10 @@ class PackageManager:
         for pkg in changes["removed"]:
             self.log.info("%s %s", pkg, changes["removed"][pkg])
 
-    def refresh(self, refresh_args: List[str] = ()) -> Tuple[int, str, str]:
+    def refresh(self) -> Tuple[int, str, str]:
         """
         Refresh available packages for upgrade.
 
-        :param refresh_args: arguments pass to package manager
         :return: (exit_code, stdout, stderr)
         """
         raise NotImplementedError()

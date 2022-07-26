@@ -28,14 +28,6 @@ def main(args=None):
 def parse_args(args):
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--no-refresh', action='store_false',
-                        help='Do not refresh available package before '
-                             'upgrading')  # TODO
-    parser.add_argument('--force-refresh', action='store_true',
-                        help='Do not upgrade if refresh fails')  # TODO
-    parser.add_argument('--remove-obsolete', action='store_true',
-                        help='Remove obsolete packages during upgrading')  # TODO
-
     parser.add_argument('--show-output', action='store_true',
                         help='Show output of management commands')
     parser.add_argument('--force-color', action='store_true',

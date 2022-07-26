@@ -39,11 +39,10 @@ class DNFCLI(PackageManager):
                 raise RuntimeError("Package manager not found!")
         self.package_manager: str = pck_mngr
 
-    def refresh(self, refresh_args: List[str] = ()) -> Tuple[int, str, str]:
+    def refresh(self) -> Tuple[int, str, str]:
         """
         Use package manager to refresh available packages.
 
-        :param refresh_args: arguments pass to package manager
         :return: (exit_code, stdout, stderr)
         """
         out = ""

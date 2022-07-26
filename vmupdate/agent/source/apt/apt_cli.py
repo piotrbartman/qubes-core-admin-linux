@@ -33,11 +33,10 @@ class APTCLI(PackageManager):
         # to prevent a warning: `debconf: unable to initialize frontend: Dialog`
         os.environ['DEBIAN_FRONTEND'] = 'noninteractive'
 
-    def refresh(self, refresh_args: List[str] = ()) -> Tuple[int, str, str]:
+    def refresh(self) -> Tuple[int, str, str]:
         """
         Use apt-get update to refresh available packages.
 
-        :param refresh_args: arguments pass to package manager
         :return: (exit_code, stdout, stderr)
         """
         cmd = [self.package_manager, "-q", "update"]
