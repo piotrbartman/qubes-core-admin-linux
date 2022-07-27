@@ -26,6 +26,8 @@ import shutil
 import tempfile
 from subprocess import CalledProcessError
 
+from vmupdate.agent.source.args import AgentArgs
+
 
 class QubeConnection:
     """
@@ -103,12 +105,13 @@ class QubeConnection:
         self.logger.debug("RUN COMMAND: %s", command)
         os.system(command)
 
-    def run_entrypoint(self, entrypoint_path, force_color, **kwargs):
+    def run_entrypoint(self, entrypoint_path, force_color, agent_args):
         """
         Run a script in the qube.
 
         :param entrypoint_path: str: path to the entrypoint.py in the qube
         :param force_color: bool
+        :param agent_args: args for agent entrypoint
         :return: Tuple[int, str]: return code and output of the script
         """
         # make sure entrypoint is executable
@@ -119,9 +122,7 @@ class QubeConnection:
         )
 
         # run entrypoint
-        cli_args = [("--" + k, v) for k, v in kwargs.items()]
-        cli_args = sum(cli_args, ())  # [(a, 0), (b, 1)] -> [a, 0, b, 1]
-        command = [entrypoint_path, *cli_args]
+        command = [entrypoint_path, *AgentArgs.to_cli_args(agent_args)]
         self.logger.debug("RUN COMMAND: %s", command)
         exit_code_, output_ = self._run_shell_command_in_qube(
             self.qube, command, force_color

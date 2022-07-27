@@ -4,7 +4,7 @@ import sys
 
 from pathlib import Path
 
-from source.args import add_arguments
+from source.args import AgentArgs
 from source.apt.configuration import get_configured_apt
 from source.dnf.configuration import get_configured_dnf
 from source.utils import get_os_data
@@ -16,7 +16,7 @@ Path(LOGPATH).mkdir(parents=True, exist_ok=True)
 
 def parse_args(args):
     parser = argparse.ArgumentParser()
-    add_arguments(parser)
+    AgentArgs.add_arguments(parser)
     args = parser.parse_args(args)
     return args
 
@@ -40,9 +40,9 @@ def main(args=None):
             "Only Debian and RedHat based os is supported.")
 
     # TODO config here
-    return_code = pkg_mng.upgrade(refresh=args.refresh,
-                                  hard_fail=args.force_refresh,
-                                  remove_obsolete=args.remove_obsolete,
+    return_code = pkg_mng.upgrade(refresh=not args.no_refresh,
+                                  hard_fail=not args.force_upgrade,
+                                  remove_obsolete=not args.leave_obsolete,
                                   requirements=requirements
                                   )
     # TODO clean config

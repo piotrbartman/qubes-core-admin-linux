@@ -38,16 +38,15 @@ class UpdateManager:
     """
 
     def __init__(self, qubes, max_concurrency, show_output,
-                 force_color, cleanup, loglevel):
+                 force_color, cleanup):
         self.qubes = qubes
         self.max_concurrency = max_concurrency
         self.show_output = show_output
         self.force_color = force_color
         self.cleanup = cleanup
-        self.loglevel = loglevel
         self.exit_code = 0
 
-    def run(self):
+    def run(self, agent_args):
         """
         Run simultaneously `update_qube` for all qubes as separate processes.
         """
@@ -56,7 +55,7 @@ class UpdateManager:
             pool.apply_async(
                 update_qube,
                 (qube.name, self.show_output, self.force_color, self.cleanup,
-                 self.loglevel),
+                 agent_args),
                 callback=self.collect_result
             )
         pool.close()
@@ -79,7 +78,7 @@ class UpdateManager:
             print(qube_name + ": " + result)
 
 
-def update_qube(qname, show_output, force_color, cleanup, loglevel):
+def update_qube(qname, show_output, force_color, cleanup, agent_args):
     """
     Create and run `UpdateAgentManager` for qube.
 
@@ -87,7 +86,7 @@ def update_qube(qname, show_output, force_color, cleanup, loglevel):
     :param show_output: flag, if true print full output
     :param force_color: flag, if true do not sanitize output
     :param cleanup: flag, if true updater files will be removed from the qube
-    :param loglevel: logging level inside the qube
+    :param agent_args: args for agent entrypoint
     :return:
     """
     app = qubesadmin.Qubes()
@@ -101,10 +100,9 @@ def update_qube(qname, show_output, force_color, cleanup, loglevel):
             qube,
             force_color=force_color,
             cleanup=cleanup,
-            loglevel=loglevel,
         )
         exit_code, result = runner.run_agent(
-            return_output=show_output, log=loglevel)
+            return_output=show_output, agent_args=agent_args)
     except Exception as e:  # pylint: disable=broad-except
         return qname, 1, "ERROR (exception {})".format(str(e))
     return qube.name, exit_code, result
@@ -138,7 +136,7 @@ class UpdateAgentManager:
         self.force_color = force_color
         self.cleanup = cleanup
 
-    def run_agent(self, return_output, **kwargs):
+    def run_agent(self, return_output, agent_args):
         self.log.debug('Running update agent for {}'.format(self.qube.name))
         dest_dir = UpdateAgentManager.WORKDIR
         dest_agent = os.path.join(dest_dir, UpdateAgentManager.ENTRYPOINT)
@@ -153,7 +151,7 @@ class UpdateAgentManager:
             self.log.debug("The agent is starting the task in qube: {}".format(
                 self.qube.name))
             exit_code, output = qc.run_entrypoint(
-                dest_agent, self.force_color, **kwargs)
+                dest_agent, self.force_color, agent_args)
 
             for line in output:
                 self.log.info('agent output: %s', line)

@@ -7,7 +7,7 @@ import argparse
 
 import qubesadmin
 from . import update_manager
-from .agent.source.args import add_arguments
+from .agent.source.args import AgentArgs
 
 
 def main(args=None):
@@ -54,7 +54,7 @@ def parse_args(args):
     parser.add_argument('--app', action='store_true',
                         help='Target all AppVMs')
 
-    add_arguments(parser)
+    AgentArgs.add_arguments(parser)
     args = parser.parse_args(args)
 
     # if args.show_output and args.force_color:  # TODO check force color for apt/dnf/yum etc.
@@ -94,9 +94,8 @@ def run_update(qube_predicator, targets, args):
                                           force_color=args.force_color,
                                           max_concurrency=args.max_concurrency,
                                           cleanup=not args.no_cleanup,
-                                          loglevel=args.log,
                                           )
-    return runner.run()
+    return runner.run(agent_args=args)
 
 
 if __name__ == '__main__':
