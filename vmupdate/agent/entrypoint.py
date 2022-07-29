@@ -24,8 +24,6 @@ def parse_args(args):
 def main(args=None):
     """
     Run the appropriate package manager.
-
-    :param args: # TODO
     """
     args = parse_args(args)
     os_data = get_os_data()

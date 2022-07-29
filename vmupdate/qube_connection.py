@@ -21,9 +21,9 @@
 
 import os
 import time
-from os.path import join
 import shutil
 import tempfile
+from os.path import join
 from subprocess import CalledProcessError
 
 from vmupdate.agent.source.args import AgentArgs
