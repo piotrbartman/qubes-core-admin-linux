@@ -52,9 +52,11 @@ def get_package_manager(os_data, log, log_handler, log_level, no_progress):
     """
     if os_data["os_family"] == "Debian":
         try:
+            raise ImportError()
             from source.apt.apt_api import APT as PackageManager
         except ImportError:
             log.warning("Failed to load apt with progress bar. Use apt cli.")
+            print("Progress reporting not available.", flush=True)
             # no progress reporting
             no_progress = True
 
@@ -65,6 +67,7 @@ def get_package_manager(os_data, log, log_handler, log_level, no_progress):
             from source.dnf.dnf_api import DNF as PackageManager
         except ImportError:
             log.warning("Failed to load dnf with progress bar. Use dnf cli.")
+            print("Progress reporting not available.", flush=True)
             # no progress reporting
             no_progress = True
 
